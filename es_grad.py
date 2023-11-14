@@ -50,14 +50,15 @@ def evaluate(actor, env, memory=None, n_episodes=1, random=False, noise=None, re
     for _ in range(n_episodes):
 
         score = 0
-        obs = deepcopy(env.reset())
+        obs, _ = deepcopy(env.reset())
         done = False
+        truncated = False
 
-        while not done:
+        while not done and not truncated:
 
             # get next action and act
             action = policy(obs)
-            n_obs, reward, done, _ = env.step(action)
+            n_obs, reward, done, truncated, _ = env.step(action)
             done_bool = 0 if steps + \
                 1 == env._max_episode_steps else float(done)
             score += reward
@@ -291,11 +292,12 @@ class CriticTD3(RLNN):
 
 
 if __name__ == "__main__":
+    print('USE_CUDA:', USE_CUDA)
 
     parser = argparse.ArgumentParser()
 
     parser.add_argument('--mode', default='train', type=str,)
-    parser.add_argument('--env', default='HalfCheetah-v2', type=str)
+    parser.add_argument('--env', default='HalfCheetah-v4', type=str)
     parser.add_argument('--start_steps', default=10000, type=int)
 
     # DDPG parameters
@@ -407,10 +409,11 @@ if __name__ == "__main__":
     df = pd.DataFrame(columns=["total_steps", "average_score",
                                "average_score_rl", "average_score_ea", "best_score"])
     while total_steps < args.max_steps:
-
+        print('--------Generation--------', es.g)
         fitness = []
         fitness_ = []
         es_params = es.ask(args.pop_size)
+
 
         # udpate the rl actors and the critic
         if total_steps > args.start_steps:
@@ -494,7 +497,7 @@ if __name__ == "__main__":
                 critic.save_model(args.output, "critic")
                 actor.set_params(es.mu)
                 actor.save_model(args.output, "actor")
-            df = df.append(res, ignore_index=True)
+            df = df._append(res, ignore_index=True)
             step_cpt = 0
             print(res)
 
